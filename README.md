@@ -1,1 +1,3 @@
-# bot-for-discords
+# Discord Bot
+
+Бот для Discord'а
