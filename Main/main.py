@@ -164,7 +164,8 @@ async def ранг(ctx):
         await ctx.reply(file=discord.File('output.png'))  # Отправляем изображение на сервер
     except Exception as e:
         await ctx.reply(f'Произошла ошибка: {e}')
-   
+#---End Command---#
+
 # Команда, которая добавляет текст на изображение
 @bot.command()
 async def статистика(ctx):
@@ -227,5 +228,6 @@ async def статистика(ctx):
         await ctx.reply(file=discord.File('output.png'))  # Отправляем изображение на сервер
     except Exception as e:
         await ctx.reply(f'Произошла ошибка: {e}')
+#---End Command---#
         
 bot.run(config['token'])
