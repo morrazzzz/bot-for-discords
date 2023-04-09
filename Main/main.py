@@ -3,11 +3,8 @@ import requests
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
+from Configs.BotSettings import config
 
-config = {
-    'token': 'ТОКЕН ВАШЕГО БОТА, ЗАМЕНИТЬ!!!',
-    'prefix': '!',
-}
 # Создаем экземпляр бота и настраиваем Intents
 intents = discord.Intents(messages=True, message_content=True, members = True)
 
