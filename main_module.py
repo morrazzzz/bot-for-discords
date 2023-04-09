@@ -27,6 +27,8 @@ from Configs.BotSettings import config
 class MyWindow(QMainWindow):
     def __init__(self):
         super(MyWindow, self).__init__()
+        # Добавляем атрибут commands и инициализируем его пустым словарем
+        self.commands = {}
 
         self.text_edit = QTextEdit()  # Создание экземпляра QTextEdit
         self.setup_syntax_highlighting()
@@ -37,7 +39,10 @@ class MyWindow(QMainWindow):
         self.context_menu = QMenu(self)
         copy_action = QAction("Копировать имя функции", self)
         copy_action.triggered.connect(self.copy_function_name)
+        dupl_action = QAction("Дублировать функцию", self)
+        dupl_action.triggered.connect(self.duplicate_command)
         self.context_menu.addAction(copy_action)
+        self.context_menu.addAction(dupl_action)
 
         # Создаем менюбар
         menu_bar = self.menuBar()
@@ -281,11 +286,13 @@ class MyWindow(QMainWindow):
 
     def save_command(self):
         # Обработчик события нажатия кнопки "Сохранить команду"
-        command_name = self.list_widget.currentItem().text()
-        command_code = self.text_edit.toPlainText()
+        current_item = self.list_widget.currentItem()
+        if current_item is not None:
+            command_name = self.list_widget.currentItem().text()
+            command_code = self.text_edit.toPlainText()
 
         # Проверяем наличие существующей команды
-        with open("Main/main.py", "r", encoding='utf-8') as file:
+        with open("Main/main.py", "r+", encoding='utf-8') as file:
             commands = file.read()
             pattern = fr'@bot\.command\(\)\s+async\s+def\s+{command_name}\(ctx\):\s+#---End Command---#'
             if re.search(pattern, commands, flags=re.DOTALL):
@@ -302,8 +309,6 @@ class MyWindow(QMainWindow):
 
             # Записываем код команды в файл main.py
             replacement = f"@bot.command()\nasync def {command_name}(ctx):\n{command_code}\n    #---End Command---#\n\n"
-            commands = commands.strip()  # Удаляем лишние пробелы и переносы строк в конце файла
-            # Ищем строку "bot.run(config['token'])" и добавляем сохранение перед нею
             bot_run_pattern = r'bot\.run\(config\[\'token\'\]\)'
             bot_run_match = re.search(bot_run_pattern, commands, flags=re.DOTALL)
             if bot_run_match:
@@ -320,6 +325,8 @@ class MyWindow(QMainWindow):
         # Перезагружаем список команд
         self.reload_commands()
 
+
+
         
     # Слот-функция для отображения контекстного меню
     def show_context_menu(self, pos):
@@ -333,6 +340,29 @@ class MyWindow(QMainWindow):
             # Выполняем операцию копирования имени функции в буфер обмена
             QApplication.clipboard().setText(function_name)
             
+    # Слот-функция для дублирования команды
+    def duplicate_command(self):
+        selected_item = self.list_widget.currentItem()
+        if selected_item:
+            command_name = selected_item.text()
+            # Получаем команду из списка команд по имени
+            command = self.commands.get(command_name)
+            if command:
+                # Генерируем новое имя команды в формате "предыдущее-название + число"
+                new_command_name = "{}_copy".format(command_name)
+                i = 1
+                while new_command_name in self.commands:
+                    new_command_name = "{}_copy{}".format(command_name, i)
+                    i += 1
+                # Дублируем команду, создавая новую функцию с новым именем и кодом
+                command_code = inspect.getsource(command)
+                new_command_code = command_code.replace(command_name, new_command_name)
+                exec(new_command_code)
+                new_command = globals()[new_command_name]
+                # Добавляем новую команду в список команд и QListWidget
+                self.commands[new_command_name] = new_command
+                self.list_widget.addItem(new_command_name)
+
     # Слот-функция для отображения окна настроек бота
     def show_bot_settings(self):
         # Использование атрибута config для доступа к значениям настроек
