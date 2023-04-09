@@ -219,7 +219,7 @@ class MyWindow(QMainWindow):
                 
     def start_cmd(self):
         # Вызываем командную строку с командой python Main/main
-        cmd = "python Main/main"
+        cmd = "python run.py"
         Popen(cmd, creationflags=CREATE_NEW_CONSOLE)
         
     def setup_syntax_highlighting(self):
@@ -239,6 +239,7 @@ class MyWindow(QMainWindow):
 
     def exit(self):
         print("Выход")
+        sys.exit(0)  # Выход из приложения с кодом 0 (успешное завершение)
 
     def app_settings(self):
         print("Настройки приложения")

@@ -1,6 +1,8 @@
 from PyQt5.QtWidgets import QApplication, QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QTabWidget, QWidget
 import sys
 from Configs.BotSettings import config
+from PyQt5.QtCore import QRegExp
+from PyQt5.QtGui import QRegExpValidator
 
 class BotSettingsDialog(QDialog):
     def __init__(self):
@@ -40,7 +42,30 @@ class BotSettingsDialog(QDialog):
         # Создаем вкладку "Настройки каналов" и добавляем на нее виджеты
         channels_tab = QWidget()
         channels_tab.setLayout(QVBoxLayout())
-        channels_tab.layout().addWidget(QLabel("Здесь находятся настройки каналов"))
+        
+        # Получаем каналы из config
+        welcome_channel_id = config['WelcomeChannel']
+        goodbye_channel_id = config['GoodByeChannel']
+        audit_channel_id = config['AuditChannel']
+        
+        # Создаем виджеты QLineEdit для отображения и редактирования значений каналов
+        welcome_edit = QLineEdit()
+        welcome_edit.setValidator(QRegExpValidator(QRegExp("[0-9]*")))  # Устанавливаем фильтр на вводимые символы (только цифры)
+        welcome_edit.setText(welcome_channel_id)
+        goodbye_edit = QLineEdit()
+        goodbye_edit.setValidator(QRegExpValidator(QRegExp("[0-9]*")))
+        goodbye_edit.setText(goodbye_channel_id)
+        audit_edit = QLineEdit()
+        audit_edit.setValidator(QRegExpValidator(QRegExp("[0-9]*")))
+        audit_edit.setText(audit_channel_id)
+
+        # Добавляем виджеты на вкладку
+        channels_tab.layout().addWidget(QLabel("Канал для приветствий:"))
+        channels_tab.layout().addWidget(welcome_edit)
+        channels_tab.layout().addWidget(QLabel("Канал для прощаний:"))
+        channels_tab.layout().addWidget(goodbye_edit)
+        channels_tab.layout().addWidget(QLabel("Канал аудита:"))
+        channels_tab.layout().addWidget(audit_edit)
 
         # Добавляем вкладки на виджет вкладок
         self.tabs = QTabWidget()
@@ -60,19 +85,36 @@ class BotSettingsDialog(QDialog):
         self.prefix_edit.setText(self.config['prefix'])
         self.token_edit.setText(self.config['token'])
 
-    def show_bot_settings(self):
-        # Используем значения атрибутов класса для настроек
-        self.prefix_edit.setText(self.config['prefix'])
-        self.token_edit.setText(self.config['token'])
+    # Создаем слот для обработки нажатия на кнопку "ОК"
+    def save_prefix_and_token():
+        # Получаем значения из виджетов
+        prefix = self.prefix_edit.text()
+        token = self.token_edit.text()
 
-        result = self.exec_()
+        # Сохраняем значения в config
+        self.config['prefix'] = prefix
+        self.config['token'] = token
 
-        if result == QDialog.Accepted:
-            # Сохраняем значения токена и префикса из виджетов в атрибуты класса
-            self.config['prefix'] = self.prefix_edit.text()
-            self.config['token'] = self.token_edit.text()
+        # Показываем диалоговое окно с сообщением об успешном сохранении
+        QMessageBox.information(self, "Сохранение", "Префикс и токен сохранены успешно.")
 
+    # Создаем слот для обработки нажатия на кнопку "ОК"
+    def save_channels():
+        # Получаем значения из виджетов
+        welcome_channel_id = welcome_edit.text()
+        goodbye_channel_id = goodbye_edit.text()
+        audit_channel_id = audit_edit.text()
+    
+        # Сохраняем значения в config
+        config['WelcomeChannel'] = welcome_channel_id
+        config['GoodByeChannel'] = goodbye_channel_id
+        config['AuditChannel'] = audit_channel_id
 
+        # Показываем диалоговое окно с сообщением об успешном сохранении
+        QMessageBox.information(self, "Сохранение", "Настройки каналов сохранены успешно.")
+
+        ok_button.clicked.connect(save_prefix_and_token)
+        ok_button.clicked.connect(save_channels)
 if __name__ == '__main__':
     app = QApplication(sys.argv)
 
