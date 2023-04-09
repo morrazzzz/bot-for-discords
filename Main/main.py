@@ -165,4 +165,67 @@ async def ранг(ctx):
     except Exception as e:
         await ctx.reply(f'Произошла ошибка: {e}')
    
+# Команда, которая добавляет текст на изображение
+@bot.command()
+async def статистика(ctx):
+    try:
+        user = ctx.author  # Получаем пользователя, вызвавшего команду
+        
+        # Проверяем, есть ли пользователь в словаре опыта, если нет, то добавляем его
+        if user.id not in user_exp:
+            user_exp[user.id] = 0
+
+        # Получаем текущий опыт пользователя
+        exp = user_exp[user.id]
+        
+        current_rank = None
+        next_rank = None
+        for rank_name, rank_data in ranks.items():
+            max_exp = rank_data['max_exp']
+            if exp >= max_exp:
+                current_rank = rank_name
+                if rank_name == 'Опытный':
+                    exp = max_exp
+                next_rank_data = ranks.get(list(ranks.keys())[list(ranks.keys()).index(rank_name) + 1])
+                if next_rank_data:
+                    next_rank = list(ranks.keys())[list(ranks.keys()).index(rank_name) + 1]
+                break  # Перемещаем оператор break внутрь цикла
+
+        
+        avatar_url = user.avatar.url  # Получаем URL аватарки пользователя
+        response = requests.get(avatar_url)  # Загружаем аватарку по URL
+        avatar = Image.open(BytesIO(response.content))  # Открываем аватарку как изображение
+        avatar = avatar.resize((256, 256))  # Масштабируем аватарку до 128x128 пикселей
+
+        # Создаем маску с закругленными углами
+        mask = Image.new('L', avatar.size, 0)
+        draw = ImageDraw.Draw(mask)
+        draw.ellipse((20, 20, avatar.size[0], avatar.size[1]), fill=255)
+
+        # Применяем маску к аватарке
+        avatar.putalpha(mask)
+        
+        # Загружаем изображение с рамкой
+        frame_url = 'https://www.onlygfx.com/wp-content/uploads/2017/11/grunge-circle-frame-2.png'  # Замените ссылку на URL изображения с рамкой
+        frame_response = requests.get(frame_url)
+        frame = Image.open(BytesIO(frame_response.content))
+        frame = frame.resize((256,256))
+
+        image = Image.new('RGB', (1200, 400), (255, 255, 255))  # Создаем новое изображение размером 600x200 с белым фоном
+        draw = ImageDraw.Draw(image)
+        
+        font_name = ImageFont.truetype('arial.ttf', 50)  # Выбираем шрифт и размер текста
+        font_exp = ImageFont.truetype('arial.ttf', 48)  # Выбираем шрифт и размер текста
+        
+        draw.text((430, 20), user.name, fill='black', font=font_name)  # Добавляем текст на изображение с черным цветом
+        
+        draw.text((300, 200), f'Опыт: {exp}/{max_exp}', fill='black', font=font_exp)  # Добавляем текст на изображение с черным цветом
+        
+        image.paste(avatar, (20, 70), mask=avatar)  # Добавляем аватарку на изображение с использованием маски
+        image.paste(frame, (30, 75), mask=frame)
+        image.save('output.png')  # Сохраняем изображение в формате PNG
+        await ctx.reply(file=discord.File('output.png'))  # Отправляем изображение на сервер
+    except Exception as e:
+        await ctx.reply(f'Произошла ошибка: {e}')
+        
 bot.run(config['token'])
