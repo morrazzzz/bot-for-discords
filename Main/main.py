@@ -1,13 +1,12 @@
 import discord
 import requests
+from Configs.BotSettings import config
 from discord.ext import commands
+from discord.ui import View
+from discord import Embed
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 
-config = {
-    'token': 'ТОКЕН ВАШЕГО БОТА, ЗАМЕНИТЬ!!!',
-    'prefix': '!',
-}
 # Создаем экземпляр бота и настраиваем Intents
 intents = discord.Intents(messages=True, message_content=True, members = True)
 
@@ -35,11 +34,19 @@ user_exp = {}
 # Обработчик события загрузки бота
 @bot.event
 async def on_ready():
-    print(f'Бот {bot.user.name} готов к работе')
+    print('Бот успешно подключен к серверу!')
+    print('Имя бота: ', bot.user.name)
+    print('ID бота: ', bot.user.id)
+    print('------')
+    print('Список серверов с ботом:')
+    for guild in bot.guilds:
+        if bot.user in guild.members:  # Проверяем, находится ли бот на сервере в списке участников
+            print(f'Имя сервера: {guild.name}, ID сервера: {guild.id}')
+
     
 async def on_member_join(member):
     # Получаем канал, в котором будет происходить приветствие
-    welcome_channel = client.get_channel(1081953009317203979)  # Замените на ID канала, где будете делать приветствие
+    welcome_channel = bot.get_channel(config['WelcomeChannel'])  # Замените на ID канала, где будете делать приветствие
 
     # Создаем embed с приветствием
     embed = discord.Embed(title=f'Добро пожаловать на сервер {member.guild.name}!', description=f'Привет, {member.mention}! Добро пожаловать на наш сервер!', color=discord.Color.green())
@@ -52,7 +59,7 @@ async def on_member_join(member):
    
 async def on_member_remove(member):
     # Получаем канал, в котором будет происходить прощание
-    goodbye_channel = client.get_channel(1081953382945796137)  # Замените на ID канала, где будете делать прощание
+    goodbye_channel = bot.get_channel(get_channel(config['GoodByeChannel']))  # Замените на ID канала, где будете делать прощание
 
     # Создаем embed с прощанием
     embed = discord.Embed(title='До свидания!', description=f'{member.name}#{member.discriminator} покинул(а) сервер {member.guild.name}.', color=discord.Color.red())
@@ -160,9 +167,73 @@ async def ранг(ctx):
         
         image.paste(avatar, (20, 70), mask=avatar)  # Добавляем аватарку на изображение с использованием маски
         image.paste(frame, (30, 75), mask=frame)
-        image.save('output.png')  # Сохраняем изображение в формате PNG
-        await ctx.reply(file=discord.File('output.png'))  # Отправляем изображение на сервер
+        image.save(f'Main/image/rank_{user.name}.png')  # Сохраняем изображение в формате PNG с именем участника
+        await ctx.reply(file=discord.File(f'Main/image/rank_{user.name}.png'))  # Отправляем изображение на сервер Discord
+
     except Exception as e:
         await ctx.reply(f'Произошла ошибка: {e}')
-   
+#---End Command---#
+
+# Команда, которая добавляет текст на изображение
+@bot.command()
+async def участники(ctx):
+    try:
+        # Получаем список всех участников сервера
+        members = ctx.guild.members
+
+        # Проверяем, что список не пуст
+        if not members:
+            await ctx.reply('Список участников пуст.')
+            return
+
+        # Разбиваем список на страницы по 10 участников на каждой
+        chunks = [members[i:i + 10] for i in range(0, len(members), 10)]
+
+        # Проверяем, что список chunks не пуст
+        if not chunks:
+            await ctx.reply('Список участников пуст.')
+            return
+
+        # Создаем View для кнопок переключения страниц
+        class PagesView(View):
+            def __init__(self, pages):
+                super().__init__()
+                self.pages = pages
+                self.current_page = 0
+
+            async def on_timeout(self):
+                await self.stop()
+
+            @discord.ui.button(label='Previous', style=discord.ButtonStyle.primary)
+            async def prev_button(self, button: discord.ui.Button, interaction: discord.Interaction):
+                self.current_page -= 1
+                if self.current_page < 0:
+                    self.current_page = 0
+                await self.update_embed(interaction)
+
+            @discord.ui.button(label='Next', style=discord.ButtonStyle.primary)
+            async def next_button(self, button: discord.ui.Button, interaction: discord.Interaction):
+                self.current_page += 1
+                if self.current_page >= len(self.pages):
+                    self.current_page = len(self.pages) - 1
+                await self.update_embed(interaction)
+
+            async def update_embed(self, interaction: discord.Interaction):
+                embed = Embed(title='Member List', description=f'Page {self.current_page + 1}/{len(self.pages)}')
+                for member in self.pages[self.current_page]:
+                    embed.add_field(name=member.display_name, value=f'Exp: {get_member_exp(member)}')
+                await interaction.response.edit_message(embed=embed, view=self)
+
+        # Создаем и отправляем первое сообщение с embed и кнопками
+        embed = Embed(title='Member List', description=f'Page 1/{len(chunks)}')
+        for member in chunks[0]:
+            embed.add_field(name=member.display_name, value=f'Exp: {get_member_exp(member)}')
+        view = PagesView(chunks)
+        await ctx.send(embed=embed, view=view)
+
+    except Exception as e:
+        await ctx.reply(f'Произошла ошибка: {e}')
+#---End Command---#
+
+
 bot.run(config['token'])
